@@ -7,7 +7,7 @@ KEY_LEN = 32
 ROUNDS = 5
 
 def subkey(k, i):
-    round_key = u.BitArray(KEY_LEN)
+    round_key = u.BitArray()
 
     for j in range(1, KEY_LEN + 1):
         round_key[j] = k[((5*i+j-1) % KEY_LEN) + 1]
@@ -15,7 +15,7 @@ def subkey(k, i):
     return round_key
 
 def round_func(y, rk):
-    w = u.BitArray(L)
+    w = u.BitArray()
 
     # First half of the block.
     for j in range(1, L//2 + 1):
