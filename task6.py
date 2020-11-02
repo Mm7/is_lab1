@@ -9,7 +9,7 @@ KEY_LEN = 32
 ROUNDS = 5
 
 def subkey(k, i):
-    round_key = u.BitArray()
+    round_key = u.BitArray(KEY_LEN)
 
     for j in range(1, KEY_LEN + 1):
         round_key[j] = k[((5*i+j-1) % KEY_LEN) + 1]
@@ -17,7 +17,7 @@ def subkey(k, i):
     return round_key
 
 def round_func(y, rk):
-    w = u.BitArray()
+    w = u.BitArray(MSG_LEN)
 
     # First half of the block.
     for j in range(1, L//2 + 1):
@@ -30,7 +30,7 @@ def round_func(y, rk):
     return w
 
 def linearized_round_func(y, rk):
-    w = u.BitArray()
+    w = u.BitArray(MSG_LEN)
 
     # First half of the block.
     for j in range(1, L//2 + 1):
@@ -44,9 +44,9 @@ def linearized_round_func(y, rk):
 
 # Compute `Mv` where `M` is a matrix and `v` is a plain/cipher text.
 def matmul(M, v):
-    r = u.BitArray()
+    r = u.BitArray(MSG_LEN)
 
-    for i in range(1, 33):
+    for i in range(1, MSG_LEN + 1):
         p = M[i-1].to_int() & v
         r[i] = bin(p).count('1') % 2
 
@@ -54,20 +54,20 @@ def matmul(M, v):
 
 # Convert a matrix to the numpy format.
 def to_numpy(M):
-    np_M = np.zeros((32,32))
+    np_M = np.zeros((MSG_LEN, MSG_LEN))
 
-    for i in range(1,33):
-        for j in range(1, 33):
+    for i in range(1,MSG_LEN + 1):
+        for j in range(1, MSG_LEN + 1):
             np_M[i-1][j-1] = M[i-1][j]
 
     return np_M
 
 # Convert back from numpy format.
 def from_numpy(np_M):
-    M = [u.BitArray() for _ in range(32)]
+    M = [u.BitArray(MSG_LEN) for _ in range(MSG_LEN)]
 
-    for i in range(1,33):
-        for j in range(1,33):
+    for i in range(1,MSG_LEN + 1):
+        for j in range(1, MSG_LEN + 1):
             M[i-1][j] = int(np_M[i-1][j-1])
 
     return M
@@ -90,14 +90,14 @@ def key_guess(A_inv, B, x, u):
 # Compute the A, B matrices for the linearized cipher.
 c = u.Cipher(MSG_LEN, KEY_LEN, ROUNDS, linearized_round_func, subkey)
 
-A = [u.BitArray() for _ in range(32)]
-B = [u.BitArray() for _ in range(32)]
-for i in range(1, 33):
-    for j in range(1, 33):
-        e_j = 1 << (32-j)
+A = [u.BitArray(MSG_LEN) for _ in range(MSG_LEN)]
+B = [u.BitArray(MSG_LEN) for _ in range(MSG_LEN)]
+for i in range(1, MSG_LEN + 1):
+    for j in range(1, MSG_LEN + 1):
+        e_j = 1 << (MSG_LEN-j)
 
-        A[i-1][j] = u.BitArray(u.enc(0, e_j, c))[i]
-        B[i-1][j] = u.BitArray(u.enc(e_j, 0, c))[i]
+        A[i-1][j] = u.BitArray(MSG_LEN, u.enc(0, e_j, c))[i]
+        B[i-1][j] = u.BitArray(MSG_LEN, u.enc(e_j, 0, c))[i]
 
 A_inv = matinv(A)
 

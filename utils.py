@@ -1,46 +1,47 @@
 from collections import namedtuple
 
 class BitArray():
-    def __init__(self, num=0):
-        self.arr = [((num >> i) & 1) for i in range(32)]
+    def __init__(self, size, num=0):
+        self.size = size
+        self.arr = [((num >> i) & 1) for i in range(size)]
 
     def __getitem__(self, index):
         assert index > 0
-        assert index <= 32
+        assert index <= self.size
 
-        return self.arr[32-index]
+        return self.arr[self.size-index]
 
     def __setitem__(self, index, value):
         assert value == 0 or value == 1
         assert index > 0
-        assert index <= 32
+        assert index <= self.size
 
-        self.arr[32-index] = value
+        self.arr[self.size-index] = value
 
     def __xor__(self, other):
-        res = BitArray()
+        res = BitArray(self.size)
 
-        for j in range(1, 32 + 1):
+        for j in range(1, self.size + 1):
             res[j] = self[j] ^ other[j]
 
         return res
 
     # Split this bit array into two smaller bit arrays.
     def split(self):
-        upper = BitArray()
-        lower = BitArray()
+        upper = BitArray(self.size)
+        lower = BitArray(self.size)
 
-        lower.arr[16:] = self.arr[:16]
-        upper.arr[16:] = self.arr[16:]
+        lower.arr[self.size // 2:] = self.arr[:self.size // 2]
+        upper.arr[self.size // 2:] = self.arr[self.size // 2:]
 
         return upper, lower
 
     # Join this bit array to `other`.
     def join(self, other):
-        res = BitArray()
+        res = BitArray(self.size)
 
-        res.arr[:16] = self.arr[16:]
-        res.arr[16:] = other.arr[16:]
+        res.arr[:self.size // 2] = self.arr[self.size // 2:]
+        res.arr[self.size // 2:] = other.arr[self.size // 2:]
 
         return res
 
@@ -48,7 +49,7 @@ class BitArray():
     def to_int(self):
         i = 0
 
-        for j in range(32):
+        for j in range(self.size):
             i |= (self.arr[j] << j)
 
         return i
@@ -74,12 +75,12 @@ Cipher = namedtuple('Cipher', ['msg_len', 'key_len', 'rounds', 'round_func', 'su
 def enc(u, k, c):
     assert isinstance(c, Cipher)
 
-    k = BitArray(k)
+    k = BitArray(c.key_len, k)
     l = c.msg_len // 2
 
     # Split the input message into 2 `l` bit long blocks (`z_1` and `y_1` in the
     # scheme).
-    y, z = BitArray(u).split()
+    y, z = BitArray(c.msg_len, u).split()
 
     for i in range(1, c.rounds + 1):
         # Generate the round key.
