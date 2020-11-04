@@ -7,7 +7,7 @@ KEY_LEN = 32
 ROUNDS = 5
 
 def subkey(k, i):
-    round_key = u.BitArray()
+    round_key = u.BitArray(KEY_LEN)
 
     for j in range(1, KEY_LEN + 1):
         round_key[j] = k[((5*i+j-1) % KEY_LEN) + 1]
@@ -15,7 +15,7 @@ def subkey(k, i):
     return round_key
 
 def round_func(y, rk):
-    w = u.BitArray()
+    w = u.BitArray(MSG_LEN)
 
     # First half of the block.
     for j in range(1, L//2 + 1):
@@ -29,10 +29,14 @@ def round_func(y, rk):
 
 c = u.Cipher(MSG_LEN, KEY_LEN, ROUNDS, round_func, subkey)
 
-e = u.enc(0x12345678, 0x87654321, c)
-print("ciphertext --> %x" % e)
-d = u.dec(e, 0x87654321, c)
-print("decrypted message --> %x" % d)
+# Verify the correctness of the implementation of the cipher.
+plaintext = 0x12345678
+key = 0x87654321
+e = u.enc(plaintext, key, c)
+print("ciphertext --> 0x%x" % e)
+d = u.dec(e, key, c)
+print("decrypted message --> 0x%x" % d)
 
-
+assert plaintext == d
+assert plaintext == u.inv_enc(e, key, c)
 

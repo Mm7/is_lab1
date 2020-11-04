@@ -1,5 +1,6 @@
 from collections import namedtuple
 
+# Helper class which provides easy bit-level operations over numbers.
 class BitArray():
     def __init__(self, size, num=0):
         self.size = size
@@ -103,12 +104,52 @@ def enc(u, k, c):
 
     return x
 
-# Decrypt a ciphertext `x`.
-# All the parameters are the same as `enc` (except for the ciphertext `x`).
+# Decrypt a ciphertext.
+#
+# Parameters:
+#   `x`: input ciphertext to decrypt. The size of this ciphertext in bits is `msg_len`.
+#   `k`: encryption key.
+#   `c`: Feistel cipher to use for the encryption.
+def dec(x, k, c):
+    assert isinstance(c, Cipher)
+
+    k = BitArray(c.key_len, k)
+    l = c.msg_len // 2
+
+    # Split the input ciphertext into 2 `l` bit long blocks (`z_1` and `y_1` in the
+    # scheme).
+    y, v = BitArray(c.msg_len, x).split()
+
+    for i in reversed(range(1, c.rounds + 1)):
+        # Generate the round key.
+        round_key = c.subkey_func(k, i)
+
+        # S
+        w = c.round_func(y, round_key)
+
+        # L
+        z = v ^ w
+
+        # In the final round the transposition is skipped.
+        if i != 1:
+            # T
+            v = y
+            y = z
+
+    # Join the `z` and `y` blocks to make the message text.
+    x = z.join(y).to_int()
+
+    return x
+
+
+# Decrypt a ciphertext `x` by inverting the round key sequence.
+#
+# This function can be used to verify the correctness of the implementation
+# of the Feistel cipher.
 #
 # The implementation simply reuses `enc` with the subkey generated
 # in the reverse order.
-def dec(x, k, c):
+def inv_enc(x, k, c):
     def inv_subkey_func(k,i):
         return c.subkey_func(k, c.rounds - i + 1)
 
