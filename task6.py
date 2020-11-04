@@ -142,3 +142,48 @@ if success:
 else:
     print('The key seems to work only for some pairs')
 
+# Now, let's estimate the success probability of the linear approximation used.
+#
+# Considering the first l/2 bits, the round function is:
+#    w[j] = y[j] ^ (rk[4*j-3] & (y[2*j-1] | rk[2*j-1] | rk[2*j] | rk[4*j-2]))
+#
+# If any of the ORed terms is true, then w[j] is equal to:
+#    w[j] = y[j] ^ rk[4*j-3]
+#
+# Now, let's run a simulation to estimate the probability that this approximations holds:
+total_cases = 5000
+success_cases = 0
+
+for _ in range(total_cases):
+    # Generate a random key.
+    k = u.BitArray(KEY_LEN, np.random.randint(0, 2**KEY_LEN))
+
+    # Simulate all the rounds of the cipher and check if the
+    # linear approximation holds for all of them.
+    holds = True
+
+    for i in range(1, ROUNDS + 1):
+        # Compute the round key.
+        rk = subkey(k, i)
+
+        # Compare the linear approx. to the ground-truth.
+        for j in range(1, L//2 + 1):
+            if rk[4*j-3] != (rk[4*j-3] & (rk[2*j-1] | rk[2*j] | rk[4*j-2])):
+                holds = False
+                break
+
+        for j in range(L//2 + 1, L + 1):
+            if rk[4*j-2*L] != (rk[4*j-2*L] & (rk[2*j-1] | rk[2*j] | rk[4*j-2*L-1])):
+                holds = False
+                break
+
+    # If it holds, increment the success counter
+    if holds:
+        success_cases += 1
+
+# Fraction of success (~probability of success).
+prob_succ = success_cases / total_cases
+
+print('Success probability: %.2e' % prob_succ)
+print('Random guess probability: %.2e' % (1/(2**MSG_LEN)))
+
